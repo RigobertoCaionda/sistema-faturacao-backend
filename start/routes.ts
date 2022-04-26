@@ -18,3 +18,6 @@ Route.delete("/delete_product", "ProductsController.deleteProduct").middleware(
 );
 Route.get("/expired_products", "ProductsController.expiredProducts");
 Route.get("/categories_product", "ProductsController.getProductsByCategory");
+Route.post("/nota_credito", "NotaCreditosController.notaCredito").middleware(
+  "auth"
+);

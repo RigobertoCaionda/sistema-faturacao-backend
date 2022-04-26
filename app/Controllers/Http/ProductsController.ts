@@ -220,7 +220,10 @@ export default class ProductsController {
     if (!cat) {
       return { error: "categoria inválida" };
     }
-    let products = await Product.findBy("categoryId", cat);
-    return products;
+    //let products = await Product.findBy("categoryId", cat); O findBy retorna um unico registro
+    let products = await Product.query()
+      .where("categoryId", cat)
+      .preload("category");
+    return { products };
   }
 }
