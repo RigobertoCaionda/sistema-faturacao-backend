@@ -7,16 +7,15 @@ export default class SelledProducts extends BaseSchema {
     this.schema.createTable(this.tableName, (table) => {
       table.increments("id");
 
-      table.string("name").notNullable();
-      table.double("price").notNullable();
       table
-        .integer("category_id")
+        .integer("product_id")
         .unsigned()
         .notNullable()
         .references("id")
-        .inTable("categories")
-        .onUpdate("CASCADE"); // Nao vai o onDelete pq se uma categoria é apagada, nao tem que apagar os produtos vendidos dessa categoria, mas se o id da categoria mudar, faz sentido mudar em todo mundo
+        .inTable("products")
+        .onUpdate("CASCADE"); // Nao vai o onDelete pq se um produto é apagado, nao tem que apagar os produtos vendidos desse produto, mas se o id do produto mudar, faz sentido mudar em todo mundo
       table.integer("quantity").notNullable();
+      table.double("price").notNullable();
       table
         .integer("venda_id")
         .unsigned()

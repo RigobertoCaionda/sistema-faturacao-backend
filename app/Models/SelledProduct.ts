@@ -1,24 +1,21 @@
 import { DateTime } from "luxon";
 import { BaseModel, belongsTo, BelongsTo, column } from "@ioc:Adonis/Lucid/Orm";
-import Category from "./Category";
 import Venda from "./Venda";
 import NotaCredito from "./NotaCredito";
+import Product from "./Product";
 
 export default class SelledProduct extends BaseModel {
   @column({ isPrimary: true })
   public id: number;
 
   @column()
-  public name: string;
-
-  @column()
-  public price: string;
-
-  @column()
-  public categoryId: number;
+  public productId: number;
 
   @column()
   public quantity: number;
+
+  @column()
+  public price: number;
 
   @column()
   public vendaId: number;
@@ -30,8 +27,9 @@ export default class SelledProduct extends BaseModel {
   public updatedAt: DateTime;
 
   // RELACOES
-  @belongsTo(() => Category)
-  public category: BelongsTo<typeof Category>; // Um produto vendido pertence a so uma categoria.
+
+  @belongsTo(() => Product)
+  public product: BelongsTo<typeof Product>; // A tabela que está a levar  a chave primaria da outra é que vai o belongsTo em relacionamentos 1:N
 
   @belongsTo(() => Venda)
   public venda: BelongsTo<typeof Venda>;
