@@ -18,7 +18,7 @@ type Products = {
   productId: number;
   quantity: number;
   vendaId?: number;
-  price: number;
+  price?: number;
 };
 type updateProductType = {
   name?: string;
@@ -50,13 +50,15 @@ export default class ProductsController {
   public async sellProduct({ auth }: HttpContextContract) {
     //const data = request.all(); // estaremos recebendo um array de objetos
     const data: Products[] = [
-      { productId: 1, quantity: 1, price: 1500 },
-      { productId: 2, quantity: 2, price: 50000 },
+      { productId: 3, quantity: 5 },
+      { productId: 1, quantity: 10 },
     ]; // Simulacao de dados vindo do backend
     if (data.length > 0) {
       let venda = await Venda.create({ employeeId: auth.user?.id });
       for (let product of data) {
+        let prod = await Product.find(product.productId);
         product.vendaId = venda.id;
+        product.price = prod?.price as number;
       }
       let products: SelledProduct[] = []; // Se der bug no primeiro, a fatura sera vazia
       for (let i in data) {
