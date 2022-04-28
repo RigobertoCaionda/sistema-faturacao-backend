@@ -8,9 +8,17 @@ export default class NotaCreditosController {
   public async notaCredito({ auth }: HttpContextContract) {
     //const { vendaId, selledProductId, quantity } = request.all(); // Quantity refere-se a quantidade que ele quer diminuir
     const data = [
-      { vendaId: 13, selledProductId: 21, quantity: 1 },
-      { vendaId: 13, selledProductId: 22, quantity: 1 },
+      { vendaId: 15, selledProductId: 234, quantity: 1 },
+      { vendaId: 15, selledProductId: 2467, quantity: 1 },
     ];
+    /* OBS: No array data eu tenho a ordem dos objetos, comecando de cima para baixo, logo, se der errado no
+    objeto de selledProductId x, quer dizer que todos acima dele derao certo, entao so precisarei repetir dele
+    para baixo, pegando o idVenda e o selledProductId eu consigo repetir ele. E tmbm consigo saber quais derao
+    certo pegando todos os registros com esseIdVenda e juntando em uma unica notaCredito, entao nos erros eu devo
+    enviar o data para o funcionario ver a ordem, saber quem deve repetir e quais derao certo..
+    Quando da errado, vc vai pegar o idVenda (Que aparecera no json), vai pegar no selledProductId desse produto
+    e vai repetir. Depois é só fazer uma unica fatura com os que derao certo.
+    */
     if (!auth.user?.admin) {
       return { error: "Ação permitida apenas aos admnistradores" };
     }
@@ -33,11 +41,12 @@ export default class NotaCreditosController {
             return {
               error: `Não pode descontar mais do que aquilo que comprou (Produto ${
                 parseInt(i) + 1
-              })`,
+              }, com selledProductId de ${data[i].selledProductId})`,
             };
           }
         }
       }
+
       for (let i = 0; i < data.length; i++) {
         if (i < data.length - 1) {
           // Para nao dar erro de vendaId inexistente na posicao data.length
@@ -50,23 +59,39 @@ export default class NotaCreditosController {
       let totalprice = 0;
       for (let i in data) {
         if (!data[i].vendaId) {
-          return { error: `Id da venda inválido (Produto ${parseInt(i) + 1})` };
+          return {
+            error: `Id da venda inválido (Produto ${
+              parseInt(i) + 1
+            }), com selledProductId de ${data[i].selledProductId}`,
+            data,
+          };
         }
 
         if (!data[i].selledProductId) {
           return {
-            error: `Id do selledProduct inválido (Produto ${parseInt(i) + 1})`,
+            error: `Id do selledProduct inválido (Produto ${
+              parseInt(i) + 1
+            }), com selledProductId de ${data[i].selledProductId}`,
+            data,
           };
         }
 
         if (!data[i].quantity) {
-          return { error: `Quantidade inválido (Produto ${parseInt(i) + 1})` };
+          return {
+            error: `Quantidade inválido (Produto ${
+              parseInt(i) + 1
+            }), com selledProductId de ${data[i].selledProductId}`,
+            data,
+          };
         }
 
-        let venda = await Venda.find(data[i].vendaId);
+        let venda = await Venda.find(data[i].vendaId); // Aqui
         if (!venda) {
           return {
-            error: `Essa venda não existe (Produto ${parseInt(i) + 1})`,
+            error: `Essa venda não existe (Produto ${
+              parseInt(i) + 1
+            }), com selledProductId de ${data[i].selledProductId}`,
+            data,
           };
         }
         let selledProduct = await SelledProduct.find(data[i].selledProductId);
@@ -74,7 +99,8 @@ export default class NotaCreditosController {
           return {
             error: `Nenhum produto com este id foi vendido (Produto ${
               parseInt(i) + 1
-            })`,
+            }), com selledProductId de ${data[i].selledProductId}`,
+            data,
           };
         }
 
@@ -82,14 +108,18 @@ export default class NotaCreditosController {
           return {
             error: `Não pode descontar uma quantidade maior que a que comprou (Produto ${
               parseInt(i) + 1
-            })`,
+            }), com selledProductId de ${data[i].selledProductId}`,
+            data,
           };
         }
         await NotaCredito.create(data[i]);
         let product = await Product.find(selledProduct.productId); // Depois que ja criou a nota de credito, agora preciso alterar o stock do produto
         if (!product) {
           return {
-            error: `Produto não encontrado (Produto ${parseInt(i) + 1})`,
+            error: `Produto não encontrado (Produto ${
+              parseInt(i) + 1
+            }), com selledProductId de ${data[i].selledProductId}`,
+            data,
           };
         }
         let stock = product.stock + data[i].quantity;
@@ -122,4 +152,36 @@ export default class NotaCreditosController {
       return { error: "Precisa enviar um array com os dados." };
     }
   }
+
+  public async consultarNotaCredito({ request }: HttpContextContract) {
+    const { vendaId } = request.all();
+    if (!vendaId) {
+      return { error: "Precisa enviar vendaId" };
+    }
+    let notaCredito = await NotaCredito.query().where("vendaId", vendaId);
+    if (notaCredito.length <= 0) {
+      return { error: "Não existem notas de crédito com esse idVenda" };
+    }
+    let newNotaCredito: any = [];
+    let totalPrice = 0;
+    for (let nota of notaCredito) {
+      let selledProduct = await SelledProduct.find(nota.selledProductId);
+      if (!selledProduct) {
+        return { error: "Nunca vendemos um produto com este id." };
+      }
+      let product = await Product.find(selledProduct.productId);
+      totalPrice += selledProduct.price * nota.quantity;
+      newNotaCredito.push({
+        idNotaCredito: nota.id,
+        quantity: nota.quantity,
+        idVenda: nota.vendaId,
+        selledProductId: nota.selledProductId,
+        productName: product?.name,
+        price: selledProduct.price,
+        priceTotal: selledProduct.price * nota.quantity,
+      });
+    }
+    return { data: { notaCredito: newNotaCredito, totalPrice } };
+  }
 }
+// Caso der erro no primeiro, vc precisa repetir tudo, senao, vc só repete a partir de onde deu erro (referente a funcao notaCredito).

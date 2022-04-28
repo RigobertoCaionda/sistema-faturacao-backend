@@ -222,10 +222,10 @@ export default class ProductsController {
     if (!cat) {
       return { error: "categoria inválida" };
     }
-    //let products = await Product.findBy("categoryId", cat); O findBy retorna um unico registro
     let products = await Product.query()
       .where("categoryId", cat)
-      .preload("category");
+      .preload("category"); // O findBy retorna o primeiro registro que achar
     return { products };
   }
 }
+// MELHORIA: Criar uma funcao para calcular os produtos mais vendidos e os produtos menos vendidos.

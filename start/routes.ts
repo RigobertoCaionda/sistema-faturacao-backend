@@ -21,3 +21,7 @@ Route.get("/categories_product", "ProductsController.getProductsByCategory");
 Route.post("/nota_credito", "NotaCreditosController.notaCredito").middleware(
   "auth"
 );
+Route.get(
+  "/consultar_nota_credito",
+  "NotaCreditosController.consultarNotaCredito"
+);
