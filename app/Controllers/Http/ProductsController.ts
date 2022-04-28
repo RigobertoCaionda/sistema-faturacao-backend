@@ -227,4 +227,29 @@ export default class ProductsController {
       .preload("category"); // O findBy retorna o primeiro registro que achar
     return { products };
   }
+
+  public async howManySold({ request }: HttpContextContract) {
+    const { productId } = request.all();
+    if (!productId) {
+      return { error: "Deve enviar o productId" };
+    }
+    let quantity = await SelledProduct.query().where("productId", productId);
+    return { quantity: quantity.length };
+  }
+
+  public async mostSold({}: HttpContextContract) {
+    let products = await Product.all(); // Retorna todos, depois coloca num array todos
+    let retorno: any = [];
+    for (let prod of products) {
+      let total = await SelledProduct.query()
+        .select("*")
+        .where("productId", prod.id); // Nos produtos que nao foram vendidos vai retornar length 0
+      retorno.push({ nome: prod.name, total: total.length });
+    }
+    let novoRetorno = retorno.filter((item) => item.total > 0);
+    let highestToLowest = novoRetorno.sort((a, b) => b - a);
+
+    return { retorno: highestToLowest };
+  }
 }
+// MELHORIA: Ao sortear, contar tmbm com as quantidades

@@ -25,3 +25,5 @@ Route.get(
   "/consultar_nota_credito",
   "NotaCreditosController.consultarNotaCredito"
 );
+Route.get("/how_many_sold", "ProductsController.howManySold");
+Route.get("/most_sold", "ProductsController.mostSold");
