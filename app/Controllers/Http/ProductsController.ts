@@ -238,18 +238,22 @@ export default class ProductsController {
   }
 
   public async mostSold({}: HttpContextContract) {
-    let products = await Product.all(); // Retorna todos, depois coloca num array todos
-    let retorno: any = [];
+    let products = await Product.all(); // Retorna todos, depois coloca todos num array
+    let retorno: { name: string; total: number }[] = [];
     for (let prod of products) {
       let total = await SelledProduct.query()
         .select("*")
         .where("productId", prod.id); // Nos produtos que nao foram vendidos vai retornar length 0
-      retorno.push({ nome: prod.name, total: total.length });
+      let tot = 0;
+      for (let i in total) {
+        tot += total[i].quantity;
+      }
+      retorno.push({ name: prod.name, total: tot });
     }
     let novoRetorno = retorno.filter((item) => item.total > 0);
-    let highestToLowest = novoRetorno.sort((a, b) => b - a);
+    let highestToLowest = novoRetorno.sort((a, b) => b.total - a.total);
 
     return { retorno: highestToLowest };
   }
 }
-// MELHORIA: Ao sortear, contar tmbm com as quantidades
+// FAZER A FUNCAO DOS PRODUTOS MENOS VENDIDOS
