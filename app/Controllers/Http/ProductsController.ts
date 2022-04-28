@@ -33,7 +33,7 @@ export default class ProductsController {
   public async calcularFatura(products: SelledProduct[]) {
     let fatura: FaturaType[] = [];
     for (let i in products) {
-      let cat = await Category.find(products[i].product.categoryId); // Sempre vai retornar uma cat, caso contrario nao chegaria aqui
+      let cat = await Category.find(products[i].product.categoryId);
       this.priceTotalCmb += products[i].price * products[i].quantity;
       fatura.push({
         name: products[i].product.name,
@@ -60,7 +60,7 @@ export default class ProductsController {
         product.vendaId = venda.id;
         product.price = prod?.price as number;
       }
-      let products: SelledProduct[] = []; // Se der bug no primeiro, a fatura sera vazia
+      let products: SelledProduct[] = []; // Se der erro no primeiro produto, a fatura sera vazia
       for (let i in data) {
         let product = await Product.find(data[i].productId);
         if (product && product.stock < data[i].quantity) {
@@ -89,9 +89,9 @@ export default class ProductsController {
               fatura,
               priceTotalCmb: this.priceTotalCmb,
             },
-          }; // A partir do produto que der errado, vc devera repetir todos os outros (Numa outra venda neste caso)
+          }; // A partir do produto que der errado, é necessário repetir todos os outros (Numa outra venda neste caso)
         }
-        await SelledProduct.create(data[i]); // Nem chega a fazer a venda, retorna logo, caso  a quantidade desejada for maior que a do stock
+        await SelledProduct.create(data[i]); // Nem chega a fazer a venda, retorna logo o erro, caso  a quantidade desejada for maior que a do stock
         let currentStock = product.stock - data[i].quantity;
         product.merge({ stock: currentStock });
         await product.save();
@@ -100,7 +100,7 @@ export default class ProductsController {
           .preload("product");
       }
       // Tratando os dados que serao retornados ao frontend como fatura
-      let fatura = await this.calcularFatura(products); // Funcao que calcula a fatura, ela é assincrona, precisa do await
+      let fatura = await this.calcularFatura(products);
       return {
         data: { status: "ok", fatura, priceTotalCmb: this.priceTotalCmb },
       };
@@ -228,4 +228,3 @@ export default class ProductsController {
     return { products };
   }
 }
-// MELHORIA: Criar uma funcao para calcular os produtos mais vendidos e os produtos menos vendidos.

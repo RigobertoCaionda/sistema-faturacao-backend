@@ -6,7 +6,7 @@ import Venda from "App/Models/Venda";
 
 export default class NotaCreditosController {
   public async notaCredito({ auth }: HttpContextContract) {
-    //const { vendaId, selledProductId, quantity } = request.all(); // Quantity refere-se a quantidade que ele quer diminuir
+    //const { vendaId, selledProductId, quantity } = request.all(); // Quantity refere-se a quantidade que o cliente quer retirar
     const data = [
       { vendaId: 15, selledProductId: 234, quantity: 1 },
       { vendaId: 15, selledProductId: 2467, quantity: 1 },
@@ -85,7 +85,7 @@ export default class NotaCreditosController {
           };
         }
 
-        let venda = await Venda.find(data[i].vendaId); // Aqui
+        let venda = await Venda.find(data[i].vendaId);
         if (!venda) {
           return {
             error: `Essa venda não existe (Produto ${
@@ -113,7 +113,7 @@ export default class NotaCreditosController {
           };
         }
         await NotaCredito.create(data[i]);
-        let product = await Product.find(selledProduct.productId); // Depois que ja criou a nota de credito, agora preciso alterar o stock do produto
+        let product = await Product.find(selledProduct.productId);
         if (!product) {
           return {
             error: `Produto não encontrado (Produto ${
@@ -129,7 +129,7 @@ export default class NotaCreditosController {
       let notaCredito = await NotaCredito.query().where(
         "vendaId",
         data[0].vendaId
-      ); // Data na posicao 0 pq os ids serao os mesmos para qualquer venda, entao posso pegar apenas o id da primeira posicao
+      ); // Já que todos vendaIds serao os mesmos, posso simplesmente pegar o primeiro
 
       for (let i in notaCredito) {
         let selledProduct2 = await SelledProduct.find(
@@ -184,4 +184,4 @@ export default class NotaCreditosController {
     return { data: { notaCredito: newNotaCredito, totalPrice } };
   }
 }
-// Caso der erro no primeiro, vc precisa repetir tudo, senao, vc só repete a partir de onde deu erro (referente a funcao notaCredito).
+// Caso der erro no primeiro, temos que repetir tudo, se nao der erro no primeiro, repetimos apenas a partir de onde deu erro (referente a funcao notaCredito).

@@ -28,7 +28,7 @@ export default class EmployeesController {
     const { id, email, password, name, isAdmin } = request.all();
     let employee: Employee = {} as Employee;
     if (auth.user?.admin == false) {
-      employee = (await Employee.find(auth.user?.id)) as Employee; // Pode receber null o Employee, forcei para que seja Employee
+      employee = (await Employee.find(auth.user?.id)) as Employee;
       employee.merge({ email, password, name });
     } else {
       if (id) {
