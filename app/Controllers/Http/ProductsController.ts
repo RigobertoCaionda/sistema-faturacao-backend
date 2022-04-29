@@ -255,5 +255,24 @@ export default class ProductsController {
 
     return { retorno: highestToLowest };
   }
+
+  public async leastSold({}: HttpContextContract) {
+    let products = await Product.all();
+    let retorno: { name: string; total: number }[] = [];
+    for (let prod of products) {
+      let total = await SelledProduct.query()
+        .select("*")
+        .where("productId", prod.id);
+      let tot = 0;
+      for (let i in total) {
+        tot += total[i].quantity;
+      }
+      retorno.push({ name: prod.name, total: tot });
+    }
+
+    let highestToLowest = retorno.sort((a, b) => a.total - b.total);
+
+    return { retorno: highestToLowest };
+  }
 }
-// FAZER A FUNCAO DOS PRODUTOS MENOS VENDIDOS
+// Tem como fazer os mais vendidos via query?
