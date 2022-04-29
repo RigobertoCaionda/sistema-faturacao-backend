@@ -14,11 +14,9 @@ type FaturaType = {
   vendaId: number;
   createdAt: DateTime;
 };
-type newSelledProductType = {
-  productId: number;
+type RetornoType = {
   name: string;
-  month: number;
-  quantity: number;
+  total: number;
 };
 type Products = {
   productId: number;
@@ -245,7 +243,7 @@ export default class ProductsController {
 
   public async mostSold({}: HttpContextContract) {
     let products = await Product.all(); // Retorna todos, depois coloca todos num array
-    let retorno: { name: string; total: number }[] = [];
+    let retorno: RetornoType[] = [];
     for (let prod of products) {
       let total = await SelledProduct.query()
         .select("*")
@@ -258,29 +256,42 @@ export default class ProductsController {
     }
     let novoRetorno = retorno.filter((item) => item.total > 0);
     let highestToLowest = novoRetorno.sort((a, b) => b.total - a.total);
-    let c = highestToLowest.slice(0, 5);
+    let slice = highestToLowest.slice(0, 5);
 
-    return { retorno: c };
+    return { retorno: slice };
   }
 
   public async mostSoldPerMonth({ request }: HttpContextContract) {
     const { month } = request.all();
+    if (!month) {
+      return { error: "Precisa enviar month" };
+    }
     let products = await Product.all();
-    let total: SelledProduct[] = [];
+    let retorno: RetornoType[] = [];
     for (let prod of products) {
-      total = await SelledProduct.query()
+      let total = await SelledProduct.query()
         .select("*")
         .where("productId", prod.id);
+
+      let newTotal = total.filter((item) => {
+        return item.createdAt.month == month;
+      });
+
+      let tot = 0;
+      for (let i in newTotal) {
+        tot += newTotal[i].quantity;
+      }
+      retorno.push({ name: prod.name, total: tot });
     }
-    let b = total.filter((item) => {
-      item.createdAt.month == 4;
-    });
-    return { res: b }; // INACABADO
-  } // OUTRA SOLUCAO SERIA ADICIONAR UMA COLUNA DATA NA TABELA DE SELLEDPRODUCTS
+    let novoRetorno = retorno.filter((item) => item.total > 0);
+    let highestToLowest = novoRetorno.sort((a, b) => b.total - a.total);
+    let slice = highestToLowest.slice(0, 5);
+    return { res: slice };
+  }
 
   public async leastSold({}: HttpContextContract) {
     let products = await Product.all();
-    let retorno: { name: string; total: number }[] = [];
+    let retorno: RetornoType[] = [];
     for (let prod of products) {
       let total = await SelledProduct.query()
         .select("*")
