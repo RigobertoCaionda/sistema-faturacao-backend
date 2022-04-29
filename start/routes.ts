@@ -28,3 +28,4 @@ Route.get(
 Route.get("/how_many_sold", "ProductsController.howManySold");
 Route.get("/most_sold", "ProductsController.mostSold");
 Route.get("/least_sold", "ProductsController.leastSold");
+Route.get("/most_sold_month", "ProductsController.mostSoldPerMonth");

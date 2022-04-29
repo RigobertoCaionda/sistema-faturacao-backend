@@ -14,6 +14,12 @@ type FaturaType = {
   vendaId: number;
   createdAt: DateTime;
 };
+type newSelledProductType = {
+  productId: number;
+  name: string;
+  month: number;
+  quantity: number;
+};
 type Products = {
   productId: number;
   quantity: number;
@@ -252,9 +258,25 @@ export default class ProductsController {
     }
     let novoRetorno = retorno.filter((item) => item.total > 0);
     let highestToLowest = novoRetorno.sort((a, b) => b.total - a.total);
+    let c = highestToLowest.slice(0, 5);
 
-    return { retorno: highestToLowest };
+    return { retorno: c };
   }
+
+  public async mostSoldPerMonth({ request }: HttpContextContract) {
+    const { month } = request.all();
+    let products = await Product.all();
+    let total: SelledProduct[] = [];
+    for (let prod of products) {
+      total = await SelledProduct.query()
+        .select("*")
+        .where("productId", prod.id);
+    }
+    let b = total.filter((item) => {
+      item.createdAt.month == 4;
+    });
+    return { res: b }; // INACABADO
+  } // OUTRA SOLUCAO SERIA ADICIONAR UMA COLUNA DATA NA TABELA DE SELLEDPRODUCTS
 
   public async leastSold({}: HttpContextContract) {
     let products = await Product.all();
@@ -275,4 +297,3 @@ export default class ProductsController {
     return { retorno: highestToLowest };
   }
 }
-// Tem como fazer os mais vendidos via query?
