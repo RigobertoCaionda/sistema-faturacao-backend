@@ -1,62 +1,24 @@
 import type { HttpContextContract } from "@ioc:Adonis/Core/HttpContext";
+import ProductHelper from "App/helpers/ProductHelper";
 import Category from "App/Models/Category";
 import Product from "App/Models/Product";
 import SelledProduct from "App/Models/SelledProduct";
 import Venda from "App/Models/Venda";
-import { DateTime } from "luxon";
+import {
+  GenericReturnType,
+  Products,
+  updateProductType,
+} from "../../types/products";
 
-type FaturaType = {
-  name: string;
-  priceTotal: number;
-  price: number;
-  quantity: number;
-  category: string;
-  vendaId: number;
-  createdAt: DateTime;
-};
-type RetornoType = {
-  name: string;
-  total: number;
-};
-type Products = {
-  productId: number;
-  quantity: number;
-  vendaId?: number;
-  price?: number;
-};
-type updateProductType = {
-  name?: string;
-  price?: number;
-  categoryId?: number;
-  quantity?: number;
-  expiresIn?: Date;
-  stock?: number;
-};
 export default class ProductsController {
+  private productHelper = new ProductHelper(); // Pq nao funciona injetando essa dependencia diretamente no construtor? Retorna um erro dizendo que nao pode ler propriedade de undefined, reading calcularFatura
   priceTotalCmb = 0; // Variavel global (Para toda a aplicacao)
-  public async calcularFatura(products: SelledProduct[]) {
-    let fatura: FaturaType[] = [];
-    for (let i in products) {
-      let cat = await Category.find(products[i].product.categoryId);
-      this.priceTotalCmb += products[i].price * products[i].quantity;
-      fatura.push({
-        name: products[i].product.name,
-        priceTotal: products[i].price * products[i].quantity,
-        price: products[i].price,
-        quantity: products[i].quantity,
-        category: cat?.name as string,
-        vendaId: products[i].vendaId,
-        createdAt: products[i].createdAt,
-      });
-    }
-    return fatura;
-  }
   public async sellProduct({ auth }: HttpContextContract) {
     //const data = request.all(); // estaremos recebendo um array de objetos
     const data: Products[] = [
-      { productId: 3, quantity: 5 },
-      { productId: 1, quantity: 10 },
-    ]; // Simulacao de dados vindo do backend
+      { productId: 3, quantity: 2 },
+      { productId: 1, quantity: 3 },
+    ]; // Simulacao de dados vindo do frontend
     if (data.length > 0) {
       let venda = await Venda.create({ employeeId: auth.user?.id });
       for (let product of data) {
@@ -71,14 +33,16 @@ export default class ProductsController {
           if (i == "0") {
             await venda.delete(); // Apaga a venda relacionada, caso der erro no primeiro produto
           }
-          let fatura = await this.calcularFatura(products);
+          let fatura = await this.productHelper.calcularFatura(
+            products,
+            this.priceTotalCmb
+          );
           return {
             data: {
               error: `Não pode vender uma quantidade maior que a do stock (Produto ${
                 parseInt(i) + 1
               })`,
               fatura,
-              priceTotalCmb: this.priceTotalCmb,
             },
           };
         }
@@ -86,12 +50,14 @@ export default class ProductsController {
           if (i == "0") {
             await venda.delete();
           }
-          let fatura = await this.calcularFatura(products);
+          let fatura = await this.productHelper.calcularFatura(
+            products,
+            this.priceTotalCmb
+          );
           return {
             data: {
               error: `Produto na posição ${parseInt(i) + 1} não existe`,
               fatura,
-              priceTotalCmb: this.priceTotalCmb,
             },
           }; // A partir do produto que der errado, é necessário repetir todos os outros (Numa outra venda neste caso)
         }
@@ -104,10 +70,11 @@ export default class ProductsController {
           .preload("product");
       }
       // Tratando os dados que serao retornados ao frontend como fatura
-      let fatura = await this.calcularFatura(products);
-      return {
-        data: { status: "ok", fatura, priceTotalCmb: this.priceTotalCmb },
-      };
+      let fatura = await this.productHelper.calcularFatura(
+        products,
+        this.priceTotalCmb
+      );
+      return { data: { status: "ok", fatura } };
     } else {
       return { error: "Espera-se um array com os dados dos produtos vendidos" };
     }
@@ -243,7 +210,7 @@ export default class ProductsController {
 
   public async mostSold({}: HttpContextContract) {
     let products = await Product.all(); // Retorna todos, depois coloca todos num array
-    let retorno: RetornoType[] = [];
+    let mSold: GenericReturnType[] = [];
     for (let prod of products) {
       let total = await SelledProduct.query()
         .select("*")
@@ -252,13 +219,13 @@ export default class ProductsController {
       for (let i in total) {
         tot += total[i].quantity;
       }
-      retorno.push({ name: prod.name, total: tot });
+      mSold.push({ name: prod.name, total: tot });
     }
-    let novoRetorno = retorno.filter((item) => item.total > 0);
+    let novoRetorno = mSold.filter((item) => item.total > 0);
     let highestToLowest = novoRetorno.sort((a, b) => b.total - a.total);
     let slice = highestToLowest.slice(0, 5);
 
-    return { retorno: slice };
+    return { mSold: slice };
   }
 
   public async mostSoldPerMonth({ request }: HttpContextContract) {
@@ -267,7 +234,7 @@ export default class ProductsController {
       return { error: "Precisa enviar month" };
     }
     let products = await Product.all();
-    let retorno: RetornoType[] = [];
+    let mSold: GenericReturnType[] = [];
     for (let prod of products) {
       let total = await SelledProduct.query()
         .select("*")
@@ -281,17 +248,17 @@ export default class ProductsController {
       for (let i in newTotal) {
         tot += newTotal[i].quantity;
       }
-      retorno.push({ name: prod.name, total: tot });
+      mSold.push({ name: prod.name, total: tot });
     }
-    let novoRetorno = retorno.filter((item) => item.total > 0);
-    let highestToLowest = novoRetorno.sort((a, b) => b.total - a.total);
+    let newMSold = mSold.filter((item) => item.total > 0);
+    let highestToLowest = newMSold.sort((a, b) => b.total - a.total);
     let slice = highestToLowest.slice(0, 5);
-    return { res: slice };
+    return { mSold: slice };
   }
 
   public async leastSold({}: HttpContextContract) {
     let products = await Product.all();
-    let retorno: RetornoType[] = [];
+    let lSold: GenericReturnType[] = [];
     for (let prod of products) {
       let total = await SelledProduct.query()
         .select("*")
@@ -300,10 +267,10 @@ export default class ProductsController {
       for (let i in total) {
         tot += total[i].quantity;
       }
-      retorno.push({ name: prod.name, total: tot });
+      lSold.push({ name: prod.name, total: tot });
     }
 
-    let highestToLowest = retorno.sort((a, b) => a.total - b.total);
+    let highestToLowest = lSold.sort((a, b) => a.total - b.total);
 
     return { retorno: highestToLowest };
   }
